@@ -10,6 +10,7 @@ data/
 # Python
 venv/
 .venv/
+.venv-tools/
 __pycache__/
 *.pyc
 *.pyo

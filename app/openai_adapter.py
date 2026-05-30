@@ -6,15 +6,15 @@ uses OpenAI's Chat API instead of Anthropic/Claude. It is intentionally
 kept separate so you can switch between providers without changing the
 rest of the bot.
 """
+
 import os
 from typing import Optional
 
 import openai
 from loguru import logger
 
-from app.memory import semantic_search, get_recent_entries, save_synthetic_memory
 from app.config import PILLAR_EMOJI
-
+from app.memory import get_recent_entries, save_synthetic_memory, semantic_search
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-3.5-turbo")
@@ -83,21 +83,28 @@ def _format_entries_as_context(entries: list[dict]) -> str:
     lines = []
     for e in entries:
         emoji = PILLAR_EMOJI.get(e["pillar"], "📝")
-        date = e.get("created_at", "?")[:10]
+        date = str(e.get("created_at", "?"))[:10]
         pillar_label = e["pillar"].upper()
         text = e.get("summary") or e.get("raw_text", "")
         importance = e.get("importance", 5)
-        lines.append(f"[{date}] {emoji} {pillar_label} (importance:{importance}/10): {text}")
+        lines.append(
+            f"[{date}] {emoji} {pillar_label} (importance:{importance}/10): {text}"
+        )
 
     return "\n".join(lines)
 
 
-def _call_openai_chat(system: str, user: str, max_tokens: int = QUERY_MAX_TOKENS, temperature: float = 0.1) -> str:
+def _call_openai_chat(
+    system: str, user: str, max_tokens: int = QUERY_MAX_TOKENS, temperature: float = 0.1
+) -> str:
     _ensure_key()
     try:
         resp = openai.ChatCompletion.create(
             model=OPENAI_MODEL,
-            messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
+            messages=[
+                {"role": "system", "content": system},
+                {"role": "user", "content": user},
+            ],
             max_tokens=max_tokens,
             temperature=temperature,
         )
@@ -107,7 +114,9 @@ def _call_openai_chat(system: str, user: str, max_tokens: int = QUERY_MAX_TOKENS
         raise
 
 
-def query_openai(user_question: str, pillar: Optional[str] = None, n_results: int = 10) -> str:
+def query_openai(
+    user_question: str, pillar: Optional[str] = None, n_results: int = 10
+) -> str:
     entries = semantic_search(user_question, pillar=pillar, n_results=n_results)
 
     if not entries:
@@ -198,15 +207,23 @@ def run_muse_openai() -> list[str]:
 
     lines = []
     for e in entries:
-        date = e.get("created_at", "?")[:10]
+        date = str(e.get("created_at", "?"))[:10]
+        preview = e.get("summary") or str(e.get("raw_text", ""))[:150]
         lines.append(
-            f"[{date}] {e['pillar'].upper()} (importance:{e['importance']}/10): {e.get('summary') or e.get('raw_text')[:150]}"
+            f"[{date}] {e['pillar'].upper()} (importance:{e['importance']}/10): {preview}"
         )
     entries_text = "\n".join(lines)
 
     try:
-        raw = _call_openai_chat(MUSE_SYSTEM, f"Analyse these entries and generate synthetic memories:\n\n{entries_text}", max_tokens=MUSE_MAX_TOKENS, temperature=0.2)
-        import json, re
+        raw = _call_openai_chat(
+            MUSE_SYSTEM,
+            f"Analyse these entries and generate synthetic memories:\n\n{entries_text}",
+            max_tokens=MUSE_MAX_TOKENS,
+            temperature=0.2,
+        )
+        import json
+        import re
+
         cleaned = re.sub(r"^```[a-z]*\n?", "", raw)
         cleaned = re.sub(r"\n?```$", "", cleaned)
         insights = json.loads(cleaned)

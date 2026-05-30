@@ -1,18 +1,18 @@
 """
 Memory layer: SQLite for raw storage, ChromaDB for semantic search.
 """
+
 import json
 import sqlite3
 import uuid
 from datetime import datetime
-from typing import Optional
+from typing import Optional, cast
 
 import chromadb
 from chromadb.utils import embedding_functions
 from loguru import logger
 
-from app.config import DB_FILE, CHROMA_PATH
-
+from app.config import CHROMA_PATH, DB_FILE
 
 # ── ChromaDB setup ────────────────────────────────────────────────────────────
 
@@ -50,6 +50,7 @@ def get_chroma():
 
 # ── SQLite helpers ────────────────────────────────────────────────────────────
 
+
 def get_db() -> sqlite3.Connection:
     conn = sqlite3.connect(DB_FILE)
     conn.row_factory = sqlite3.Row
@@ -58,11 +59,12 @@ def get_db() -> sqlite3.Connection:
 
 # ── Core write ────────────────────────────────────────────────────────────────
 
+
 def save_entry(
     raw_text: str,
     pillar: str,
     summary: str = "",
-    entities: list = None,
+    entities: Optional[list] = None,
     sentiment: str = "neutral",
     importance: int = 5,
     source: str = "text",
@@ -78,9 +80,21 @@ def save_entry(
         INSERT INTO entries (pillar, raw_text, summary, entities, sentiment, importance, source, chroma_id)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """,
-        (pillar, raw_text, summary, entities_json, sentiment, importance, source, chroma_id),
+        (
+            pillar,
+            raw_text,
+            summary,
+            entities_json,
+            sentiment,
+            importance,
+            source,
+            chroma_id,
+        ),
     )
     entry_id = cur.lastrowid
+    if entry_id is None:
+        raise RuntimeError("Failed to insert entry into database")
+    entry_id = int(entry_id)
     conn.commit()
     conn.close()
 
@@ -90,12 +104,14 @@ def save_entry(
     col_entries.add(
         ids=[chroma_id],
         documents=[embed_text],
-        metadatas=[{
-            "entry_id": entry_id,
-            "pillar": pillar,
-            "importance": importance,
-            "created_at": datetime.utcnow().isoformat(),
-        }],
+        metadatas=[
+            {
+                "entry_id": entry_id,
+                "pillar": pillar,
+                "importance": importance,
+                "created_at": datetime.utcnow().isoformat(),
+            }
+        ],
     )
 
     logger.info(f"Saved entry #{entry_id} pillar={pillar} importance={importance}")
@@ -110,6 +126,9 @@ def save_synthetic_memory(insight: str, pillars: list, importance: int = 7) -> i
         (insight, ",".join(pillars), importance, chroma_id),
     )
     mem_id = cur.lastrowid
+    if mem_id is None:
+        raise RuntimeError("Failed to insert synthetic memory into database")
+    mem_id = int(mem_id)
     conn.commit()
     conn.close()
 
@@ -123,6 +142,7 @@ def save_synthetic_memory(insight: str, pillars: list, importance: int = 7) -> i
 
 
 # ── Core read ─────────────────────────────────────────────────────────────────
+
 
 def semantic_search(
     query: str,
@@ -172,31 +192,35 @@ def semantic_search(
 
     entries = []
     for row in rows:
-        entries.append({
-            "id": row["id"],
-            "pillar": row["pillar"],
-            "raw_text": row["raw_text"],
-            "summary": row["summary"],
-            "entities": json.loads(row["entities"] or "[]"),
-            "importance": row["importance"],
-            "sentiment": row["sentiment"],
-            "created_at": row["created_at"],
-            "source": row["source"],
-        })
+        entries.append(
+            {
+                "id": row["id"],
+                "pillar": row["pillar"],
+                "raw_text": row["raw_text"],
+                "summary": row["summary"],
+                "entities": json.loads(row["entities"] or "[]"),
+                "importance": row["importance"],
+                "sentiment": row["sentiment"],
+                "created_at": row["created_at"],
+                "source": row["source"],
+            }
+        )
 
     # Append synthetic memories as context
     for doc in syn_docs:
-        entries.append({
-            "id": None,
-            "pillar": "synthetic",
-            "raw_text": doc,
-            "summary": doc,
-            "entities": [],
-            "importance": 7,
-            "sentiment": "neutral",
-            "created_at": "",
-            "source": "muse",
-        })
+        entries.append(
+            {
+                "id": None,
+                "pillar": "synthetic",
+                "raw_text": doc,
+                "summary": doc,
+                "entities": [],
+                "importance": 7,
+                "sentiment": "neutral",
+                "created_at": "",
+                "source": "muse",
+            }
+        )
 
     return entries
 
