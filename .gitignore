@@ -1,0 +1,21 @@
+# Never commit these
+.env
+*.db
+*.db-shm
+*.db-wal
+
+# Local data
+data/
+
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# VS Code
+.vscode/
+
+# macOS
+.DS_Store
