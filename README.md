@@ -88,3 +88,12 @@ Telegram message
 - Swap ChromaDB local → Pinecone (update `app/memory.py`)
 - Deploy to Railway/Render instead of ngrok
 - Add Neo4j for the entity relationship graph (warm memory tier)
+
+---
+
+## Verification
+
+- **Verification date:** 2026-05-30
+- **What I checked:** ran a repository-wide Python syntax check (`python3 -m compileall .`) — no syntax errors were found.
+- **Notes:** I did not start the bot or run end-to-end tests because those require external secrets (Telegram/Anthropic keys) and runtime services. If you want, I can try a safe smoke run with your environment configured.
+
