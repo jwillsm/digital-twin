@@ -40,7 +40,7 @@ copy .env.example .env
 
 ### 4. Run database migrations
 ```bash
-python migrations/init_db.py
+python init_db.py
 ```
 
 ### 5. Start ngrok (in a separate terminal)
@@ -96,7 +96,7 @@ ALLOWED_USER_ID=your_telegram_user_id_here
 
 **5. Initialize database:**
 ```cmd
-python migrations/init_db.py
+python init_db.py
 ```
 
 **6. Start ngrok (in a separate cmd window, with venv activated):**
@@ -165,18 +165,39 @@ Telegram message
 - ✓ Repository-wide Python syntax check passed (`python3 -m compileall .`)
 - ✓ All files pushed to remote (`main` branch)
 - ✓ Switched from Anthropic/Claude to OpenAI Chat API
-- ✓ App folder (`app/openai_adapter.py`) included in repo
+- ✓ App folder reorganized: modules now in `app/` package with `__init__.py`
+- ✓ All Python modules properly imported
+
+**Project Structure:**
+```
+app/
+├── __init__.py           (package marker)
+├── main.py               (entry point: `python app/main.py`)
+├── config.py             (settings & environment)
+├── triage.py             (OpenAI-based text classification)
+├── query.py              (delegates to openai_adapter)
+├── muse.py               (delegates to openai_adapter)
+├── memory.py             (ChromaDB & embeddings)
+├── transcribe.py         (Whisper transcription)
+└── openai_adapter.py     (OpenAI Chat implementation)
+init_db.py               (root-level: database setup)
+requirements.txt         (dependencies)
+start.sh                 (Linux/Mac startup script)
+.env.example             (environment template)
+```
 
 **To verify locally:**
 ```bash
 python -m compileall .
+python3 -c "from app.config import OPENAI_API_KEY; print('✓ Imports OK')"
 ```
 
-**What I changed:**
+**What was changed:**
 - `triage.py`, `muse.py`, `query.py` now use OpenAI Chat instead of Claude
 - Removed `anthropic` dependency, kept `openai` in `requirements.txt`
 - Updated `.env.example` to use `OPENAI_API_KEY` instead of `ANTHROPIC_API_KEY`
-- Updated `config.py`, `start.sh`, and documentation
+- Reorganized modules into `app/` package with proper `__init__.py`
+- Added comprehensive Windows setup guide
 
 **Next steps:**
 - Set `OPENAI_API_KEY` and `TELEGRAM_BOT_TOKEN` in your `.env`
