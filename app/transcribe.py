@@ -1,6 +1,7 @@
 """
 Voice transcription using faster-whisper (runs locally, no API cost).
 """
+
 import os
 import tempfile
 from typing import Optional
@@ -17,11 +18,14 @@ def get_model():
     if _model is None:
         try:
             from faster_whisper import WhisperModel
+
             logger.info(f"Loading Whisper model: {WHISPER_MODEL}")
             _model = WhisperModel(WHISPER_MODEL, device="cpu", compute_type="int8")
             logger.info("Whisper model loaded")
         except ImportError:
-            logger.warning("faster-whisper not installed. Voice messages will be skipped.")
+            logger.warning(
+                "faster-whisper not installed. Voice messages will be skipped."
+            )
             return None
     return _model
 

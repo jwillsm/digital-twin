@@ -2,6 +2,7 @@
 Digital Twin — Telegram Bot
 Entry point. Run with: python app/main.py
 """
+
 import asyncio
 import os
 
@@ -15,27 +16,30 @@ from telegram.ext import (
     filters,
 )
 
-from app.config import TELEGRAM_BOT_TOKEN, ALLOWED_USER_ID, PILLAR_EMOJI
-from app.memory import save_entry, get_stats
-from app.triage import triage
-from app.query import query, generate_daily_brief
-from app.transcribe import transcribe
+from app.config import ALLOWED_USER_ID, PILLAR_EMOJI, TELEGRAM_BOT_TOKEN
+from app.memory import get_stats, save_entry
 from app.muse import run_muse
-
+from app.query import generate_daily_brief, query
+from app.transcribe import transcribe
+from app.triage import triage
 
 # ── Auth guard ────────────────────────────────────────────────────────────────
 
+
 def auth(func):
     """Decorator: only respond to ALLOWED_USER_ID."""
+
     async def wrapper(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         if update.effective_user.id != ALLOWED_USER_ID:
             await update.message.reply_text("⛔ Unauthorised.")
             return
         return await func(update, ctx)
+
     return wrapper
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
 
 async def send_typing(update: Update):
     await update.message.chat.send_action(constants.ChatAction.TYPING)
@@ -63,7 +67,9 @@ async def ingest_text(text: str, source: str, update: Update):
     )
 
     emoji = PILLAR_EMOJI.get(pillar, "📝")
-    sentiment_emoji = {"positive": "🟢", "neutral": "🟡", "negative": "🔴"}.get(sentiment, "🟡")
+    sentiment_emoji = {"positive": "🟢", "neutral": "🟡", "negative": "🔴"}.get(
+        sentiment, "🟡"
+    )
 
     msg = (
         f"{emoji} *{pillar.upper()}* saved (#{entry_id})\n"
@@ -77,6 +83,7 @@ async def ingest_text(text: str, source: str, update: Update):
 
 
 # ── Command handlers ──────────────────────────────────────────────────────────
+
 
 @auth
 async def cmd_start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
@@ -123,7 +130,9 @@ async def cmd_stats(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 async def cmd_query(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     question = " ".join(ctx.args)
     if not question:
-        await update.message.reply_text("Usage: /query what is my current financial situation?")
+        await update.message.reply_text(
+            "Usage: /query what is my current financial situation?"
+        )
         return
     await send_typing(update)
     answer = query(question)
@@ -132,7 +141,11 @@ async def cmd_query(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
 @auth
 async def cmd_wealth(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    question = " ".join(ctx.args) if ctx.args else "Give me a summary of my current wealth situation."
+    question = (
+        " ".join(ctx.args)
+        if ctx.args
+        else "Give me a summary of my current wealth situation."
+    )
     await send_typing(update)
     answer = query(question, pillar="wealth")
     await update.message.reply_text(answer, parse_mode="Markdown")
@@ -140,7 +153,11 @@ async def cmd_wealth(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
 @auth
 async def cmd_health(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    question = " ".join(ctx.args) if ctx.args else "Give me a summary of my current health situation."
+    question = (
+        " ".join(ctx.args)
+        if ctx.args
+        else "Give me a summary of my current health situation."
+    )
     await send_typing(update)
     answer = query(question, pillar="health")
     await update.message.reply_text(answer, parse_mode="Markdown")
@@ -148,7 +165,11 @@ async def cmd_health(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
 @auth
 async def cmd_relations(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    question = " ".join(ctx.args) if ctx.args else "Give me a summary of my current relationship landscape."
+    question = (
+        " ".join(ctx.args)
+        if ctx.args
+        else "Give me a summary of my current relationship landscape."
+    )
     await send_typing(update)
     answer = query(question, pillar="relationships")
     await update.message.reply_text(answer, parse_mode="Markdown")
@@ -160,7 +181,10 @@ async def cmd_muse(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     await send_typing(update)
     insights = run_muse()
     if not insights:
-        await update.message.reply_text("🔮 *Muse*: Not enough data yet (need ≥5 entries). Keep logging!", parse_mode="Markdown")
+        await update.message.reply_text(
+            "🔮 *Muse*: Not enough data yet (need ≥5 entries). Keep logging!",
+            parse_mode="Markdown",
+        )
         return
     lines = ["🔮 *Muse found these patterns:*\n"]
     for i, insight in enumerate(insights, 1):
@@ -169,6 +193,7 @@ async def cmd_muse(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
 
 # ── Message handlers ──────────────────────────────────────────────────────────
+
 
 @auth
 async def handle_text(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
@@ -204,24 +229,25 @@ async def handle_voice(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
 # ── Boot ──────────────────────────────────────────────────────────────────────
 
+
 def main():
     logger.info("Starting Digital Twin bot...")
 
     app = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
 
     # Commands
-    app.add_handler(CommandHandler("start",     cmd_start))
-    app.add_handler(CommandHandler("brief",     cmd_brief))
-    app.add_handler(CommandHandler("stats",     cmd_stats))
-    app.add_handler(CommandHandler("query",     cmd_query))
-    app.add_handler(CommandHandler("wealth",    cmd_wealth))
-    app.add_handler(CommandHandler("health",    cmd_health))
+    app.add_handler(CommandHandler("start", cmd_start))
+    app.add_handler(CommandHandler("brief", cmd_brief))
+    app.add_handler(CommandHandler("stats", cmd_stats))
+    app.add_handler(CommandHandler("query", cmd_query))
+    app.add_handler(CommandHandler("wealth", cmd_wealth))
+    app.add_handler(CommandHandler("health", cmd_health))
     app.add_handler(CommandHandler("relations", cmd_relations))
-    app.add_handler(CommandHandler("muse",      cmd_muse))
+    app.add_handler(CommandHandler("muse", cmd_muse))
 
     # Messages
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
-    app.add_handler(MessageHandler(filters.VOICE | filters.AUDIO,   handle_voice))
+    app.add_handler(MessageHandler(filters.VOICE | filters.AUDIO, handle_voice))
 
     logger.info("Bot is running. Press Ctrl+C to stop.")
     app.run_polling(allowed_updates=Update.ALL_TYPES)

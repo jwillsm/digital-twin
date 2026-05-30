@@ -4,6 +4,7 @@ synthetic memory insights (cross-pillar patterns, correlations).
 This module delegates to the OpenAI-based implementation in
 `app.openai_adapter` when available.
 """
+
 from loguru import logger
 
 from app.openai_adapter import run_muse_openai

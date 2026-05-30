@@ -2,6 +2,7 @@
 Triage agent: classifies raw text into a pillar and extracts structured metadata.
 Uses OpenAI's Chat API and returns strict JSON output.
 """
+
 import json
 import re
 from typing import Optional
@@ -57,7 +58,10 @@ def triage(text: str) -> dict:
         _ensure_key()
         resp = openai.ChatCompletion.create(
             model=OPENAI_MODEL,
-            messages=[{"role": "system", "content": TRIAGE_SYSTEM}, {"role": "user", "content": text}],
+            messages=[
+                {"role": "system", "content": TRIAGE_SYSTEM},
+                {"role": "user", "content": text},
+            ],
             max_tokens=256,
             temperature=0.0,
         )

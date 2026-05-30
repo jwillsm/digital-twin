@@ -2,8 +2,9 @@
 Run once to create the SQLite database schema.
 Usage: python migrations/init_db.py
 """
-import sqlite3
+
 import os
+import sqlite3
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
@@ -14,7 +15,9 @@ load_dotenv()
 DB_PATH = os.getenv("DATABASE_URL", "sqlite:///./data/digital_twin.db")
 # Strip sqlite:/// prefix
 DB_FILE = DB_PATH.replace("sqlite:///", "")
-os.makedirs(os.path.dirname(DB_FILE) if os.path.dirname(DB_FILE) else ".", exist_ok=True)
+os.makedirs(
+    os.path.dirname(DB_FILE) if os.path.dirname(DB_FILE) else ".", exist_ok=True
+)
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS entries (
@@ -51,12 +54,14 @@ CREATE TABLE IF NOT EXISTS synthetic_memories (
 );
 """
 
+
 def main():
     conn = sqlite3.connect(DB_FILE)
     conn.executescript(SCHEMA)
     conn.commit()
     conn.close()
     print(f"✅ Database initialised at: {DB_FILE}")
+
 
 if __name__ == "__main__":
     main()

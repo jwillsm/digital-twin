@@ -2,11 +2,12 @@
 Query engine: retrieves relevant entries via semantic search, then
 synthesizes a grounded answer using the configured LLM (OpenAI Chat).
 """
+
 from typing import Optional
 
 from loguru import logger
 
-from app.openai_adapter import query_openai, brief_openai
+from app.openai_adapter import brief_openai, query_openai
 
 
 def query(
