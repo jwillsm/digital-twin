@@ -58,7 +58,7 @@ def triage(text: str) -> dict:
         resp = openai.ChatCompletion.create(
             model=OPENAI_MODEL,
             messages=[{"role": "system", "content": TRIAGE_SYSTEM}, {"role": "user", "content": text}],
-            max_tokens=512,
+            max_tokens=256,
             temperature=0.0,
         )
         raw = resp.choices[0].message.content.strip()

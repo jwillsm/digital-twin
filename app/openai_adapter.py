@@ -19,6 +19,10 @@ from app.config import PILLAR_EMOJI
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-3.5-turbo")
 
+QUERY_MAX_TOKENS = 800
+BRIEF_MAX_TOKENS = 700
+MUSE_MAX_TOKENS = 650
+
 
 def _ensure_key():
     if not OPENAI_API_KEY:
@@ -88,14 +92,14 @@ def _format_entries_as_context(entries: list[dict]) -> str:
     return "\n".join(lines)
 
 
-def _call_openai_chat(system: str, user: str, max_tokens: int = 1024) -> str:
+def _call_openai_chat(system: str, user: str, max_tokens: int = QUERY_MAX_TOKENS, temperature: float = 0.1) -> str:
     _ensure_key()
     try:
         resp = openai.ChatCompletion.create(
             model=OPENAI_MODEL,
             messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
             max_tokens=max_tokens,
-            temperature=0.2,
+            temperature=temperature,
         )
         return resp.choices[0].message.content.strip()
     except Exception as e:
@@ -131,10 +135,48 @@ Answer based on the entries above. Be specific — reference actual entries, dat
 If the entries don't contain enough information to answer confidently, say so clearly and suggest what the user should start tracking."""
 
     try:
-        answer = _call_openai_chat(system_prompt, prompt, max_tokens=1024)
+        answer = _call_openai_chat(system_prompt, prompt, max_tokens=QUERY_MAX_TOKENS)
         return f"*{agent_name}*\n\n{answer}"
     except Exception:
         return "⚠️ Error generating response. Please try again."
+
+
+BRIEF_SYSTEM = ALL_PILLARS_PERSONA
+BRIEF_PROMPT = """Here are the user's most recent entries across all pillars:
+
+<entries>
+{context}
+</entries>
+
+Generate a concise daily brief with this structure:
+
+**💰 Wealth**
+[2-3 key observations, any patterns or risks]
+
+**❤️ Health**
+[2-3 key observations, any patterns or risks]
+
+**🤝 Relationships**
+[2-3 key observations, any patterns or risks]
+
+**⚡ Cross-pillar insight**
+[1-2 sentences on tensions or synergies between the pillars]
+
+**🎯 Today's priority**
+[Single most important action based on current state]
+
+Be specific, cite actual entries. Be direct — no fluff."""
+
+
+def brief_openai(limit: int = 30) -> str:
+    entries = get_recent_entries(limit=limit)
+    if not entries:
+        return "📭 No entries yet. Send me anything to start!"
+
+    context = _format_entries_as_context(entries)
+    prompt = BRIEF_PROMPT.format(context=context)
+
+    return _call_openai_chat(BRIEF_SYSTEM, prompt, max_tokens=BRIEF_MAX_TOKENS)
 
 
 MUSE_SYSTEM = """You are the Muse — an autonomous background intelligence agent.
@@ -163,7 +205,7 @@ def run_muse_openai() -> list[str]:
     entries_text = "\n".join(lines)
 
     try:
-        raw = _call_openai_chat(MUSE_SYSTEM, f"Analyse these entries and generate synthetic memories:\n\n{entries_text}", max_tokens=800)
+        raw = _call_openai_chat(MUSE_SYSTEM, f"Analyse these entries and generate synthetic memories:\n\n{entries_text}", max_tokens=MUSE_MAX_TOKENS, temperature=0.2)
         import json, re
         cleaned = re.sub(r"^```[a-z]*\n?", "", raw)
         cleaned = re.sub(r"\n?```$", "", cleaned)

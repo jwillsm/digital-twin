@@ -37,7 +37,7 @@ fi
 
 # Init database
 echo "🗄️  Initialising database..."
-python migrations/init_db.py
+python init_db.py
 
 # Start bot
 echo ""
