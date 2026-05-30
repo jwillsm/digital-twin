@@ -1,23 +1,14 @@
 """
 Query engine: retrieves relevant entries via semantic search, then
-synthesizes a grounded answer using Claude.
+synthesizes a grounded answer using the configured LLM (OpenAI Chat).
 """
 from typing import Optional
 
-import anthropic
 from loguru import logger
 
-from app.config import ANTHROPIC_API_KEY, CLAUDE_MODEL, PILLAR_EMOJI
+from app.config import PILLAR_EMOJI
 from app.memory import semantic_search, get_recent_entries
-
-_client: Optional[anthropic.Anthropic] = None
-
-
-def get_client() -> anthropic.Anthropic:
-    global _client
-    if _client is None:
-        _client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
-    return _client
+from app.openai_adapter import query_openai
 
 
 AGENT_PROFILES = {
@@ -118,20 +109,13 @@ Answer based on the entries above. Be specific — reference actual entries, dat
 If the entries don't contain enough information to answer confidently, say so clearly and suggest what the user should start tracking."""
 
     try:
-        response = get_client().messages.create(
-            model=CLAUDE_MODEL,
-            max_tokens=1024,
-            system=system_prompt,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        answer = response.content[0].text.strip()
-        return f"*{agent_name}*\n\n{answer}"
-
+        answer = query_openai(prompt, pillar=pillar, n_results=n_results)
+        return answer
     except Exception as e:
-        logger.error(f"Query error: {e}")
-        return "⚠️ Error generating response. Please try again."
-
-
+        """
+        Query engine: retrieves relevant entries via semantic search, then
+        synthesizes a grounded answer using the configured LLM (OpenAI Chat).
+        """
 def generate_daily_brief() -> str:
     """Generate a holistic daily brief across all three pillars."""
     all_entries = get_recent_entries(limit=30)
@@ -167,13 +151,7 @@ Generate a concise daily brief with this structure:
 Be specific, cite actual entries. Be direct — no fluff."""
 
     try:
-        response = get_client().messages.create(
-            model=CLAUDE_MODEL,
-            max_tokens=1200,
-            system=ALL_PILLARS_PERSONA,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        return response.content[0].text.strip()
+        return query_openai(prompt, pillar=None, n_results=20)
     except Exception as e:
         logger.error(f"Brief error: {e}")
         return "⚠️ Error generating brief."

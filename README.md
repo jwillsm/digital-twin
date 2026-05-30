@@ -25,7 +25,7 @@ pip install -r requirements.txt
 
 ### 2. Get your keys
 - **Telegram bot token**: message [@BotFather](https://t.me/BotFather) on Telegram → `/newbot`
-- **Anthropic API key**: https://console.anthropic.com
+- **OpenAI API key**: https://platform.openai.com/
  - **OpenAI API key**: https://platform.openai.com/
 
 ### 3. Configure environment
@@ -96,5 +96,5 @@ Telegram message
 
 - **Verification date:** 2026-05-30
 - **What I checked:** ran a repository-wide Python syntax check (`python3 -m compileall .`) — no syntax errors were found.
-- **Notes:** I did not start the bot or run end-to-end tests because those require external secrets (Telegram/Anthropic keys) and runtime services. If you want, I can try a safe smoke run with your environment configured.
+- **Notes:** I did not start the bot or run end-to-end tests because those require external secrets (Telegram/OpenAI keys) and runtime services. If you want, I can try a safe smoke run with your environment configured.
 

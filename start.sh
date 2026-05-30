@@ -28,7 +28,7 @@ if [ ! -f ".env" ]; then
   echo "⚠️  Created .env from template."
   echo "    Please edit .env and add your:"
   echo "    - TELEGRAM_BOT_TOKEN  (from @BotFather)"
-  echo "    - ANTHROPIC_API_KEY   (from console.anthropic.com)"
+  echo "    - OPENAI_API_KEY      (from platform.openai.com)"
   echo "    - ALLOWED_USER_ID     (from @userinfobot on Telegram)"
   echo ""
   echo "Then run: ./start.sh"
