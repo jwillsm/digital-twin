@@ -1,24 +1,21 @@
 """
 Triage agent: classifies raw text into a pillar and extracts structured metadata.
-Uses Claude with a strict JSON output format.
+Uses OpenAI's Chat API and returns strict JSON output.
 """
 import json
 import re
 from typing import Optional
 
-import anthropic
+import openai
 from loguru import logger
 
-from app.config import ANTHROPIC_API_KEY, CLAUDE_MODEL
-
-_client: Optional[anthropic.Anthropic] = None
+from app.config import OPENAI_API_KEY, OPENAI_MODEL
 
 
-def get_client() -> anthropic.Anthropic:
-    global _client
-    if _client is None:
-        _client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
-    return _client
+def _ensure_key():
+    if not OPENAI_API_KEY:
+        raise RuntimeError("OPENAI_API_KEY not set in environment")
+    openai.api_key = OPENAI_API_KEY
 
 
 TRIAGE_SYSTEM = """You are the Triage Agent for a personal Digital Twin system.
@@ -57,13 +54,14 @@ def triage(text: str) -> dict:
     Falls back gracefully on any error.
     """
     try:
-        response = get_client().messages.create(
-            model=CLAUDE_MODEL,
+        _ensure_key()
+        resp = openai.ChatCompletion.create(
+            model=OPENAI_MODEL,
+            messages=[{"role": "system", "content": TRIAGE_SYSTEM}, {"role": "user", "content": text}],
             max_tokens=512,
-            system=TRIAGE_SYSTEM,
-            messages=[{"role": "user", "content": text}],
+            temperature=0.0,
         )
-        raw = response.content[0].text.strip()
+        raw = resp.choices[0].message.content.strip()
 
         # Strip any accidental markdown fences
         raw = re.sub(r"^```[a-z]*\n?", "", raw)

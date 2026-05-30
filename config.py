@@ -4,7 +4,9 @@ from dotenv import load_dotenv
 load_dotenv()
 
 TELEGRAM_BOT_TOKEN: str = os.environ["TELEGRAM_BOT_TOKEN"]
-ANTHROPIC_API_KEY: str  = os.environ["ANTHROPIC_API_KEY"]
+ANTHROPIC_API_KEY: str  = os.environ.get("ANTHROPIC_API_KEY", "")
+OPENAI_API_KEY: str     = os.getenv("OPENAI_API_KEY", "")
+OPENAI_MODEL: str       = os.getenv("OPENAI_MODEL", "gpt-3.5-turbo")
 ALLOWED_USER_ID: int    = int(os.environ["ALLOWED_USER_ID"])
 
 DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./data/digital_twin.db")

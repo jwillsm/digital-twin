@@ -4,7 +4,7 @@ A personal AI second brain with three pillars: Wealth, Health, Relationships.
 
 ## Stack
 - **Bot**: python-telegram-bot
-- **LLM**: Claude API (claude-sonnet-4-20250514)
+- **LLM**: OpenAI Chat API (ChatGPT — configurable model via `OPENAI_MODEL`)
 - **Embeddings**: sentence-transformers (local, no API key needed)
 - **Vector store**: ChromaDB (local file, no server needed)
 - **Database**: SQLite (zero-setup for local dev, swap to Postgres later)
@@ -26,6 +26,7 @@ pip install -r requirements.txt
 ### 2. Get your keys
 - **Telegram bot token**: message [@BotFather](https://t.me/BotFather) on Telegram → `/newbot`
 - **Anthropic API key**: https://console.anthropic.com
+ - **OpenAI API key**: https://platform.openai.com/
 
 ### 3. Configure environment
 ```bash
@@ -73,12 +74,12 @@ Send any message to your Telegram bot:
 ```
 Telegram message
       ↓
-  Triage agent (Claude) — classifies into W/H/R + extracts entities
+    Triage agent (OpenAI Chat) — classifies into W/H/R + extracts entities
       ↓
   SQLite — raw storage with metadata
   ChromaDB — vector embeddings for semantic search
       ↓
-  On query: RAG retrieval → Claude synthesis → Telegram reply
+    On query: RAG retrieval → OpenAI Chat synthesis → Telegram reply
 ```
 
 ---
