@@ -10,22 +10,33 @@ The bot organizes your life into three dimensions:
 - **❤️ Health** — fitness, sleep, nutrition, energy, recovery, longevity
 - **🤝 Relationships** — people, social connections, emotional dynamics
 
-### LLM Adapters
-The bot supports **multiple LLM providers** via isolated adapter modules:
-- **`app/openai_adapter.py`** — OpenAI's Chat API (ChatGPT)
-- **`app/gemini_adapter.py`** — Google's Generative Language API (Gemini)
+### LLM Provider Switching (✨ No Code Changes Needed)
+The bot dynamically selects its LLM provider via the `LLM_PROVIDER` environment variable:
+- **`openai`** (default) — OpenAI's Chat API (ChatGPT)
+- **`gemini`** — Google's Generative Language API (Gemini)
 
-Each adapter exposes the same interface:
-- `query_[provider](question, pillar)` — RAG-based semantic search + synthesis
-- `brief_[provider](limit)` — holistic daily summary
-- `run_muse_[provider]()` — autonomous pattern detection
+**Just set `LLM_PROVIDER` in your `.env` file — no code edits required!**
 
-The main `query.py` and `muse.py` modules currently delegate to **OpenAI by default**, but you can swap providers by editing those files (no changes needed to the bot logic).
+```env
+# Use OpenAI
+LLM_PROVIDER=openai
+OPENAI_API_KEY=sk-...
+
+# OR use Gemini
+LLM_PROVIDER=gemini
+GEMINI_API_KEY=your_gemini_key
+```
+
+### Resource Optimizations (for low-end hardware)
+Optimized for 7th Gen Intel i3 + 4GB RAM + HDD:
+- **Lazy loading** — providers only initialized when needed
+- **Reduced token limits** — lower context windows (QUERY: 500, BRIEF: 400, MUSE: 400)
+- **Efficient memory management** — cached profiles, truncated entries
+- **HDD-friendly** — minimal I/O operations, efficient ChromaDB queries
 
 ## Stack
 - **Bot**: python-telegram-bot
-- **LLM (Primary)**: OpenAI Chat API (ChatGPT — configurable model via `OPENAI_MODEL`)
-- **LLM (Alternative)**: Google Gemini (configure via `GEMINI_API_KEY` and `GEMINI_MODEL`)
+- **LLM**: OpenAI Chat API or Google Gemini (configurable via env variable)
 - **Embeddings**: sentence-transformers (local, no API key needed)
 - **Vector store**: ChromaDB (local file, no server needed)
 - **Database**: SQLite (zero-setup for local dev, swap to Postgres later)
@@ -34,7 +45,7 @@ The main `query.py` and `muse.py` modules currently delegate to **OpenAI by defa
 
 ---
 
-## Setup
+## Quick Start
 
 ### 1. Clone & install
 ```bash
@@ -46,23 +57,19 @@ pip install -r requirements.txt
 
 ### 2. Get your API keys
 - **Telegram bot token**: message [@BotFather](https://t.me/BotFather) on Telegram → `/newbot`
-- **OpenAI API key**: https://platform.openai.com/
-- **Gemini API key** (optional): https://makersuite.google.com/app/apikey
+- **OpenAI API key** (if using OpenAI): https://platform.openai.com/
+- **Gemini API key** (if using Gemini): https://makersuite.google.com/app/apikey
 
 ### 3. Configure environment
 ```bash
 cp .env.example .env
-# Edit .env and fill in your keys
-```
-**Windows (cmd):**
-```cmd
-copy .env.example .env
-# Then open .env in Notepad and fill in your keys
+# Edit .env and choose your provider + add API keys
 ```
 
 **Example .env** (OpenAI):
 ```env
 TELEGRAM_BOT_TOKEN=your_telegram_bot_token
+LLM_PROVIDER=openai
 OPENAI_API_KEY=sk-...
 ALLOWED_USER_ID=123456789
 ```
@@ -70,11 +77,12 @@ ALLOWED_USER_ID=123456789
 **Example .env** (Gemini):
 ```env
 TELEGRAM_BOT_TOKEN=your_telegram_bot_token
+LLM_PROVIDER=gemini
 GEMINI_API_KEY=your_gemini_key
 ALLOWED_USER_ID=123456789
 ```
 
-### 4. Run database migrations
+### 4. Initialize database
 ```bash
 python init_db.py
 ```
@@ -82,7 +90,6 @@ python init_db.py
 ### 5. Start ngrok (in a separate terminal)
 ```bash
 ngrok http 8080
-# Copy the https URL, e.g. https://abc123.ngrok-free.app
 ```
 
 ### 6. Start the bot
@@ -92,51 +99,16 @@ python app/main.py
 
 ---
 
-## Switching LLM Providers
-
-By default, the bot uses **OpenAI**. To switch to Gemini:
-
-### 1. Update your `.env`
-```env
-GEMINI_API_KEY=your_gemini_key
-GEMINI_MODEL=models/text-bison-001
-```
-
-### 2. Edit `app/query.py`
-Replace OpenAI imports with Gemini:
-```python
-from app.gemini_adapter import brief_gemini, query_gemini
-
-def query(user_question, pillar=None, n_results=10):
-    return query_gemini(user_question, pillar=pillar, n_results=n_results)
-
-def generate_daily_brief():
-    return brief_gemini()
-```
-
-### 3. Edit `app/muse.py`
-Replace OpenAI imports with Gemini:
-```python
-from app.gemini_adapter import run_muse_gemini
-
-def run_muse():
-    return run_muse_gemini()
-```
-
-**No other changes needed** — the bot logic remains identical.
-
----
-
-## Windows Setup (Detailed Guide)
+## Windows Setup (Detailed)
 
 ### Prerequisites
-- Python 3.8+ ([download](https://www.python.org/downloads/)) — **check "Add Python to PATH"** during install
+- Python 3.8+ ([download](https://www.python.org/downloads/)) — **check "Add Python to PATH"**
 - Git ([download](https://git-scm.com/download/win))
-- ngrok ([download](https://ngrok.com/download)) or use `pip install pyngrok`
+- ngrok ([download](https://ngrok.com/download)) or `pip install pyngrok`
 
-### Step-by-step for Windows
+### Step-by-step
 
-**1. Open Command Prompt and clone:**
+**1. Clone:**
 ```cmd
 git clone https://github.com/jwillsm/digital-twin.git
 cd digital-twin
@@ -147,103 +119,134 @@ cd digital-twin
 python -m venv venv
 venv\Scripts\activate
 ```
-After activation, your prompt will show `(venv)` prefix.
 
 **3. Install dependencies:**
 ```cmd
 pip install -r requirements.txt
 ```
 
-**4. Set up environment file:**
+**4. Configure environment:**
 ```cmd
 copy .env.example .env
 ```
-Open `.env` in Notepad and fill in:
-```
-TELEGRAM_BOT_TOKEN=your_telegram_bot_token_here
-OPENAI_API_KEY=your_openai_api_key_here
-ALLOWED_USER_ID=your_telegram_user_id_here
-```
+Open `.env` in Notepad and fill in your tokens and API keys.
 
 **5. Initialize database:**
 ```cmd
 python init_db.py
 ```
 
-**6. Start ngrok (in a separate cmd window, with venv activated):**
+**6. Start ngrok (separate terminal):**
 ```cmd
 ngrok http 8080
 ```
-Copy the https URL and keep the window open.
 
-**7. Start the bot (in original cmd window):**
+**7. Start the bot:**
 ```cmd
 python app/main.py
 ```
 
-### Windows Troubleshooting
-- **"python is not recognized"**: Add Python to PATH (reinstall, check "Add Python to PATH")
+### Troubleshooting
+- **"python is not recognized"**: Add Python to PATH (reinstall with "Add Python to PATH")
 - **"pip: command not found"**: Use `python -m pip install -r requirements.txt`
-- **"activate" fails**: Try `venv\Scripts\activate.bat` instead
-- **Port 8080 in use**: Change ngrok to `ngrok http 9000`
-- **ModuleNotFoundError**: Ensure `(venv)` shows in your command prompt
+- **"activate" fails**: Try `venv\Scripts\activate.bat`
+- **ModuleNotFoundError**: Ensure `(venv)` shows in your prompt
 
 ---
 
 ## Usage
 
-Send any message to your Telegram bot:
+Send any message to your bot:
 
 | Command | What it does |
 |---|---|
-| Just type anything | Auto-classifies into W/H/R and saves |
-| 🎤 Voice message | Transcribes → classifies → saves |
-| `/query what's my financial situation?` | RAG query across all pillars |
-| `/brief` | Daily summary of all three pillars |
-| `/wealth` | Query only Wealth pillar |
-| `/health` | Query only Health pillar |
-| `/relations` | Query only Relationships pillar |
-| `/stats` | Show entry counts per pillar |
+| Any text | Auto-classifies into W/H/R and saves |
+| 🎤 Voice | Transcribes → classifies → saves |
+| `/query [question]` | RAG query across all pillars |
+| `/brief` | Daily summary of all pillars |
+| `/wealth [question]` | Query Wealth pillar only |
+| `/health [question]` | Query Health pillar only |
+| `/relations [question]` | Query Relationships pillar only |
+| `/stats` | Show entry counts |
 
 ---
 
-## Data Flow
+## Architecture Details
 
+### Data Flow
 ```
-Telegram message
+User message (text or voice)
       ↓
-    Triage agent (OpenAI Chat) — classifies into W/H/R + extracts entities
+[Transcription if voice → Triage to W/H/R]
       ↓
-  SQLite — raw storage with metadata
-  ChromaDB — vector embeddings for semantic search
+[SQLite] store raw entry
+[ChromaDB] compute embedding
       ↓
-    On query: RAG retrieval → LLM synthesis (OpenAI or Gemini) → Telegram reply
+On query: Semantic search → Retrieve context → LLM synthesis → Reply
 ```
+
+### Provider Factory Pattern
+The `app/provider.py` module dynamically loads the correct adapter at runtime:
+
+```python
+from app.provider import ProviderFactory
+
+# Automatically uses the provider from LLM_PROVIDER env var
+provider = ProviderFactory.get_provider()
+answer = provider.query(question)
+```
+
+**No code changes needed to switch providers!**
 
 ---
 
-## Development Notes
+## Development
 
-### Adding a New Adapter
-To add support for another LLM provider (e.g., Anthropic Claude, Cohere):
+### Adding a New LLM Provider
 
-1. **Create `app/[provider]_adapter.py`** with these functions:
-   - `query_[provider](question, pillar, n_results)` → str
-   - `brief_[provider](limit)` → str
-   - `run_muse_[provider]()` → list[str]
+1. **Create `app/[provider]_adapter.py`** with a class:
+```python
+class MyProviderAdapter:
+    def query(self, user_question, pillar=None, n_results=5) -> str: ...
+    def brief(self, limit=20) -> str: ...
+    def run_muse(self) -> list[str]: ...
+```
 
-2. **Use the same agent profiles and prompts** — they're provider-agnostic
+2. **Update `app/provider.py`** to recognize your provider:
+```python
+elif provider_name == "myprovider":
+    from app.myprovider_adapter import MyProviderAdapter
+    cls._provider = MyProviderAdapter()
+```
 
-3. **Update `query.py` and `muse.py`** to delegate to your adapter
+3. **Update `.env.example`** with new config keys
 
-4. **Update `.env.example`** with any new config keys
+4. **Test end-to-end**
 
-5. **Test end-to-end** before committing
+### Performance Notes (Low-End Hardware)
+- Token limits are reduced to minimize API latency and memory usage
+- Context is limited to 5 most relevant entries (tunable in adapters)
+- Lazy loading defers initialization until first use
+- ChromaDB uses cosine distance (efficient on HDDs)
+- Batch embeddings when possible
 
 ### Environment Variables
-All configuration is environment-based (see `.env.example`):
-- `TELEGRAM_BOT_TOKEN` — required
-- `ALLOWED_USER_ID` — required
-- `OPENAI_API_KEY`, `OPENAI_MODEL` — for OpenAI
-- `GEMINI_API_KEY`, `GEMINI_MODEL` — for Gemini
-- Database, Vector store, Whisper — optional, with sensible defaults
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `LLM_PROVIDER` | `openai` | Choose adapter: `openai` or `gemini` |
+| `OPENAI_API_KEY` | — | OpenAI authentication |
+| `OPENAI_MODEL` | `gpt-3.5-turbo` | OpenAI model |
+| `GEMINI_API_KEY` | — | Gemini authentication |
+| `GEMINI_MODEL` | `models/text-bison-001` | Gemini model |
+| `TELEGRAM_BOT_TOKEN` | — | Telegram bot auth |
+| `ALLOWED_USER_ID` | — | Your Telegram user ID |
+| `DATABASE_URL` | `sqlite:///./data/digital_twin.db` | SQLite path |
+| `CHROMA_PATH` | `./data/chroma` | ChromaDB vector store |
+| `WHISPER_MODEL` | `base` | Transcription model |
+
+---
+
+## License
+
+MIT — Use freely, modify, share.

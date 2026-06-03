@@ -1,19 +1,22 @@
 """
 The Muse: background agent that scans recent entries and generates
 synthetic memory insights (cross-pillar patterns, correlations).
-This module delegates to the OpenAI-based implementation in
-`app.openai_adapter` when available.
+
+The provider is selected via the LLM_PROVIDER environment variable:
+- 'openai' (default) — uses OpenAI's Chat API
+- 'gemini' — uses Google's Generative Language API
 """
 
 from loguru import logger
 
-from app.openai_adapter import run_muse_openai
+from app.provider import ProviderFactory
 
 
 def run_muse() -> list[str]:
-    """Run the OpenAI-backed Muse and return saved insights."""
+    """Run the Muse with the configured provider and return saved insights."""
     try:
-        return run_muse_openai()
+        provider = ProviderFactory.get_provider()
+        return provider.run_muse()
     except Exception as e:
-        logger.error(f"Muse delegation error: {e}")
+        logger.error(f"Muse error: {e}")
         return []

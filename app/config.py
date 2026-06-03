@@ -7,6 +7,9 @@ load_dotenv()
 TELEGRAM_BOT_TOKEN: str = os.environ["TELEGRAM_BOT_TOKEN"]
 ALLOWED_USER_ID: int = int(os.environ["ALLOWED_USER_ID"])
 
+# LLM Provider Selection: 'openai' (default) or 'gemini'
+LLM_PROVIDER: str = os.getenv("LLM_PROVIDER", "openai").lower().strip()
+
 # OpenAI Configuration
 OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
 OPENAI_MODEL: str = os.getenv("OPENAI_MODEL", "gpt-3.5-turbo")
