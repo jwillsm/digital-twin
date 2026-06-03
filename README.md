@@ -2,9 +2,30 @@
 
 A personal AI second brain with three pillars: Wealth, Health, Relationships.
 
+## Architecture
+
+### Three-Pillar System
+The bot organizes your life into three dimensions:
+- **💰 Wealth** — finances, investments, business, career decisions
+- **❤️ Health** — fitness, sleep, nutrition, energy, recovery, longevity
+- **🤝 Relationships** — people, social connections, emotional dynamics
+
+### LLM Adapters
+The bot supports **multiple LLM providers** via isolated adapter modules:
+- **`app/openai_adapter.py`** — OpenAI's Chat API (ChatGPT)
+- **`app/gemini_adapter.py`** — Google's Generative Language API (Gemini)
+
+Each adapter exposes the same interface:
+- `query_[provider](question, pillar)` — RAG-based semantic search + synthesis
+- `brief_[provider](limit)` — holistic daily summary
+- `run_muse_[provider]()` — autonomous pattern detection
+
+The main `query.py` and `muse.py` modules currently delegate to **OpenAI by default**, but you can swap providers by editing those files (no changes needed to the bot logic).
+
 ## Stack
 - **Bot**: python-telegram-bot
-- **LLM**: OpenAI Chat API (ChatGPT — configurable model via `OPENAI_MODEL`)
+- **LLM (Primary)**: OpenAI Chat API (ChatGPT — configurable model via `OPENAI_MODEL`)
+- **LLM (Alternative)**: Google Gemini (configure via `GEMINI_API_KEY` and `GEMINI_MODEL`)
 - **Embeddings**: sentence-transformers (local, no API key needed)
 - **Vector store**: ChromaDB (local file, no server needed)
 - **Database**: SQLite (zero-setup for local dev, swap to Postgres later)
@@ -23,9 +44,10 @@ source venv/bin/activate   # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### 2. Get your keys
+### 2. Get your API keys
 - **Telegram bot token**: message [@BotFather](https://t.me/BotFather) on Telegram → `/newbot`
 - **OpenAI API key**: https://platform.openai.com/
+- **Gemini API key** (optional): https://makersuite.google.com/app/apikey
 
 ### 3. Configure environment
 ```bash
@@ -36,6 +58,20 @@ cp .env.example .env
 ```cmd
 copy .env.example .env
 # Then open .env in Notepad and fill in your keys
+```
+
+**Example .env** (OpenAI):
+```env
+TELEGRAM_BOT_TOKEN=your_telegram_bot_token
+OPENAI_API_KEY=sk-...
+ALLOWED_USER_ID=123456789
+```
+
+**Example .env** (Gemini):
+```env
+TELEGRAM_BOT_TOKEN=your_telegram_bot_token
+GEMINI_API_KEY=your_gemini_key
+ALLOWED_USER_ID=123456789
 ```
 
 ### 4. Run database migrations
@@ -53,6 +89,41 @@ ngrok http 8080
 ```bash
 python app/main.py
 ```
+
+---
+
+## Switching LLM Providers
+
+By default, the bot uses **OpenAI**. To switch to Gemini:
+
+### 1. Update your `.env`
+```env
+GEMINI_API_KEY=your_gemini_key
+GEMINI_MODEL=models/text-bison-001
+```
+
+### 2. Edit `app/query.py`
+Replace OpenAI imports with Gemini:
+```python
+from app.gemini_adapter import brief_gemini, query_gemini
+
+def query(user_question, pillar=None, n_results=10):
+    return query_gemini(user_question, pillar=pillar, n_results=n_results)
+
+def generate_daily_brief():
+    return brief_gemini()
+```
+
+### 3. Edit `app/muse.py`
+Replace OpenAI imports with Gemini:
+```python
+from app.gemini_adapter import run_muse_gemini
+
+def run_muse():
+    return run_muse_gemini()
+```
+
+**No other changes needed** — the bot logic remains identical.
 
 ---
 
@@ -136,7 +207,7 @@ Send any message to your Telegram bot:
 
 ---
 
-## Architecture
+## Data Flow
 
 ```
 Telegram message
@@ -146,61 +217,33 @@ Telegram message
   SQLite — raw storage with metadata
   ChromaDB — vector embeddings for semantic search
       ↓
-    On query: RAG retrieval → OpenAI Chat synthesis → Telegram reply
+    On query: RAG retrieval → LLM synthesis (OpenAI or Gemini) → Telegram reply
 ```
 
 ---
 
-## Upgrading to production
-- Swap SQLite → Postgres (change `DATABASE_URL` in `.env`)
-- Swap ChromaDB local → Pinecone (update `app/memory.py`)
-- Deploy to Railway/Render instead of ngrok
-- Add Neo4j for the entity relationship graph (warm memory tier)
+## Development Notes
 
----
+### Adding a New Adapter
+To add support for another LLM provider (e.g., Anthropic Claude, Cohere):
 
-## Verification & Testing
+1. **Create `app/[provider]_adapter.py`** with these functions:
+   - `query_[provider](question, pillar, n_results)` → str
+   - `brief_[provider](limit)` → str
+   - `run_muse_[provider]()` → list[str]
 
-**Code Status (2026-05-30):**
-- ✓ Repository-wide Python syntax check passed (`python3 -m compileall .`)
-- ✓ All files pushed to remote (`main` branch)
-- ✓ Switched from Anthropic/Claude to OpenAI Chat API
-- ✓ App folder reorganized: modules now in `app/` package with `__init__.py`
-- ✓ All Python modules properly imported
+2. **Use the same agent profiles and prompts** — they're provider-agnostic
 
-**Project Structure:**
-```
-app/
-├── __init__.py           (package marker)
-├── main.py               (entry point: `python app/main.py`)
-├── config.py             (settings & environment)
-├── triage.py             (OpenAI-based text classification)
-├── query.py              (delegates to openai_adapter)
-├── muse.py               (delegates to openai_adapter)
-├── memory.py             (ChromaDB & embeddings)
-├── transcribe.py         (Whisper transcription)
-└── openai_adapter.py     (OpenAI Chat implementation)
-init_db.py               (root-level: database setup)
-requirements.txt         (dependencies)
-start.sh                 (Linux/Mac startup script)
-.env.example             (environment template)
-```
+3. **Update `query.py` and `muse.py`** to delegate to your adapter
 
-**To verify locally:**
-```bash
-python -m compileall .
-python3 -c "from app.config import OPENAI_API_KEY; print('✓ Imports OK')"
-```
+4. **Update `.env.example`** with any new config keys
 
-**What was changed:**
-- `triage.py`, `muse.py`, `query.py` now use OpenAI Chat instead of Claude
-- Removed `anthropic` dependency, kept `openai` in `requirements.txt`
-- Updated `.env.example` to use `OPENAI_API_KEY` instead of `ANTHROPIC_API_KEY`
-- Reorganized modules into `app/` package with proper `__init__.py`
-- Added comprehensive Windows setup guide
+5. **Test end-to-end** before committing
 
-**Next steps:**
-- Set `OPENAI_API_KEY` and `TELEGRAM_BOT_TOKEN` in your `.env`
-- Run the bot with `python app/main.py` and test on Telegram
-- (Optional) Deploy to Railway/Render for production
-
+### Environment Variables
+All configuration is environment-based (see `.env.example`):
+- `TELEGRAM_BOT_TOKEN` — required
+- `ALLOWED_USER_ID` — required
+- `OPENAI_API_KEY`, `OPENAI_MODEL` — for OpenAI
+- `GEMINI_API_KEY`, `GEMINI_MODEL` — for Gemini
+- Database, Vector store, Whisper — optional, with sensible defaults
