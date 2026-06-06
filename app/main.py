@@ -16,7 +16,7 @@ from telegram.ext import (
     filters,
 )
 
-from app.config import ALLOWED_USER_ID, PILLAR_EMOJI, TELEGRAM_BOT_TOKEN
+from app.config import ALLOWED_USER_ID, ALLOWED_USER_IDS, PILLAR_EMOJI, TELEGRAM_BOT_TOKEN
 from app.memory import get_stats, save_entry
 from app.muse import run_muse
 from app.query import generate_daily_brief, query
@@ -27,11 +27,17 @@ from app.triage import triage
 
 
 def auth(func):
-    """Decorator: only respond to ALLOWED_USER_ID."""
+    """Decorator: only respond to authorized user IDs."""
 
     async def wrapper(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-        if update.effective_user.id != ALLOWED_USER_ID:
-            await update.message.reply_text("⛔ Unauthorised.")
+        user_id = getattr(update.effective_user, "id", None)
+        if user_id not in ALLOWED_USER_IDS:
+            details = f" Your user ID is {user_id}." if user_id else ""
+            await update.message.reply_text(
+                "⛔ Unauthorised." + details + "\n"
+                "Update ALLOWED_USER_ID in .env with your Telegram numeric user ID. "
+                "You can get it from a helper bot like @userinfobot."
+            )
             return
         return await func(update, ctx)
 

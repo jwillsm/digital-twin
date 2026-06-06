@@ -44,4 +44,9 @@ echo ""
 echo "✅ Starting bot..."
 echo "   Don't forget to run ngrok in another terminal: ngrok http 8080"
 echo ""
-python app/main.py
+if grep -q '^TELEGRAM_BOT_TOKEN=your_telegram_bot_token_here' .env || grep -q '^ALLOWED_USER_ID=123456789' .env; then
+  echo "❌ .env still contains placeholder values."
+  echo "   Set TELEGRAM_BOT_TOKEN and ALLOWED_USER_ID in .env before starting."
+  exit 1
+fi
+python -m app
